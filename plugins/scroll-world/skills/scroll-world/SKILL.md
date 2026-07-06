@@ -57,10 +57,18 @@ not the framework.
 
 ## Step 1 — Interview the user
 
-Use **AskUserQuestion**. Ask only what you can't sensibly default. Cover:
+The **subject is the user's to state — ask it as an open question in plain prose**, never a
+fabricated multiple-choice. A made-up list of industries biases them and reads as you
+deciding their business for them; let them answer in their own words (their real business,
+a client's, or any idea). Reserve `AskUserQuestion` (with options) for the genuinely
+enumerable, lower-stakes choices below — art direction and brand-kit approach — and even
+there, signal they can go their own way ("Other"). Ask only what you can't sensibly
+default. Cover:
 
-1. **Subject** — the industry/product and a one-line pitch (e.g. "a bubble tea company,
-   from leaf to last sip"). If they have a brand name, get it; otherwise propose one.
+1. **Subject** (ask openly, not multiple-choice) — "What should this world be about? Your
+   business, a client's, or any idea — a word or a sentence is fine." Capture the
+   industry/product + a one-line pitch (e.g. "a bubble tea company, from leaf to last
+   sip"), and a brand name if they have one; otherwise you'll propose one below.
 2. **Brand kit** — offer three paths, pick one:
    - Import from a URL: `higgsfield marketing-studio brand-kits fetch --url <site> --wait`
      (pulls name, colours, tone). Then read it back with `brand-kits list --json`.
