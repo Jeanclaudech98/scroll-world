@@ -13,7 +13,7 @@ Collect and write down:
 - `TONE` — a word or two (cozy/premium, playful, industrial…).
 - `STYLE` — the art direction (default below).
 - `SECTIONS[]` — ordered list; for each: `id`, `label`, `subject` (what's in the diorama), `eyebrow`, `title`, `body` (≤ 1 sentence), `tags[]` (0–3). Last section = hero product + CTA.
-- `MOBILE` — yes/no. **Always asked** (SKILL Step 1.5), presented to the user as **beta**. Gates the `-m.mp4` encodes (pipeline §6) + `clipMobile`/`connectorsMobile` wiring + the full mobile QA.
+- `MOBILE` — tier: crop-safe / mobile-encodes / hero-reframe / portrait-chain. **Always asked** (SKILL Step 1.5) with credit costs stated. Gates the `-m.mp4` encodes + `posterMobile` (pipeline §6), the 9:16 renders (pipeline §7), and the full mobile QA. Phones get the full scroll animation in every tier.
 
 ## Style preamble (default: clay diorama)
 

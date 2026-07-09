@@ -90,20 +90,27 @@ default. Cover:
    the hero product. Each section needs: a short subject description (what's IN the
    diorama), an eyebrow, a headline, one line of body, and 0–3 tag pills. The last
    section is usually the hero product + the CTA.
-5. **Mobile version (beta) — ALWAYS ask this; never silently generate both.** Use
-   `AskUserQuestion`: *"Want a mobile-optimized version too? Mobile support is in
-   **beta** — the scroll-scrub mechanic is desktop-native; on phones you get lighter
-   encodes and engine hardening, but portrait crops the 16:9 frame and low-end devices
-   may still stutter."* Options: "Desktop only" / "Desktop + mobile (beta)". The beta
-   disclaimer must be stated to the user, not just implied. What the answer gates:
-   - **Yes** → produce the `-m.mp4` mobile encodes (Step 6) and wire
-     `clipMobile`/`connectorsMobile` (Step 7); run the full mobile QA (Step 8). If any
-     scene's focal subject sits off-centre, offer the 9:16 hero-variant escape hatch
-     (extra Higgsfield credits — say so).
-   - **No** → skip the mobile encodes and wiring entirely. The engine's phone hardening
-     (seek-coalescing, iOS priming, safe-area CSS) is always on regardless — that's not
-     a "mobile version," it's just the page not breaking when a phone visits — so a
-     desktop-only build still degrades gracefully.
+5. **Mobile tier — ALWAYS ask this; never silently generate extra assets.** Phones get
+   the full scroll animation in every tier — the engine's hardening (seek-coalescing,
+   iOS priming + Low Power Mode stills fallback, safe-area CSS, data-saver downgrade)
+   is always on; the tiers only decide what ASSETS exist. Use `AskUserQuestion`,
+   options in this order, with the credit cost stated:
+   - **Crop-safe (default, no extra cost)** — phones scrub the desktop clips,
+     centre-cropped to portrait. Every prompt already composes focal subjects
+     centre-safe (prompts.md), so this reads fine for most worlds.
+   - **Mobile encodes (recommended, no extra credits — just encode time)** — `-m.mp4`
+     siblings (720p, `-g 4`, Step 6) + `clipMobile`/`connectorsMobile`/`posterMobile`
+     wiring (Step 7) + mobile QA (Step 8). Phone-class devices (NOT tablets — the
+     engine tiers by screen, iPad gets the master) scrub the lighter files.
+   - **Hero reframe (small extra credit cost — state it)** — mobile encodes + 9:16
+     re-renders of the 1–2 scenes where the focal subject can't hold a centre crop
+     (usually hero + finale). Wire per-scene as the mobile clip/poster.
+   - **Full portrait chain (gold tier, ≈2× video credits — state it)** — a parallel
+     9:16 chain: portrait stills, own frame handoffs, own connectors, own SSIM gate
+     (aspect ratios can't mix mid-chain — a 9:16 clip can't continue a 16:9 frame).
+     This is what Apple ships: the mobile asset is a differently-framed render, not a
+     crop. Offer only when the user signals mobile traffic matters or the budget is
+     loose.
 
 Video model is **not** an interview question — default `seedance_2_0` silently. If the user
 names a preference, honor it **only if it can frame-lock seams** (Step 4 roster:
@@ -405,15 +412,19 @@ still as the reduced-motion artwork.
 Then run the **automated seam check** (`references/pipeline.md` §5c) before touching a
 browser — every seam SSIM ≥0.90 or you have a redo, not a QA note.
 
-**Mobile encodes (beta — only if the user opted in at Step 1.5).** Phone video decoders seek
-far slower than a laptop's, and seek cost scales with GOP length, so the 1080p `-g 8` master
-that scrubs smoothly on desktop can stutter on a phone. Produce a lighter `-m.mp4` sibling for
-every clip — **720p, `-g 4`** (more keyframes = cheaper seeks), crf 23 — and wire them as
-`clipMobile` / `connectorsMobile` (Step 7). The engine serves them automatically on phones and
-falls back to the desktop clip when absent. The exact `encm()` script is in
-`references/pipeline.md` §6. If the user chose desktop-only, skip this — the engine still
-hardens phone scrubbing regardless (seek-coalescing, iOS priming), so the page degrades
-gracefully rather than breaking.
+**Mobile encodes (only if the user picked a tier beyond crop-safe at Step 1.5).** Phone
+video decoders seek far slower than a laptop's, and seek cost scales with GOP length, so
+the 1080p `-g 8` master that scrubs smoothly on desktop can stutter on a phone. Produce a
+lighter `-m.mp4` sibling for every clip — **720p, `-g 4`** (more keyframes = cheaper
+seeks; keyframe-every-4-to-10 is the industry recipe for scrub-smooth mobile video), crf
+23 — and wire them as `clipMobile` / `connectorsMobile` (Step 7). Extract each mobile
+encode's first frame as its `posterMobile` (same doctrine as §5b — the poster must match
+the encode the device actually gets). The engine serves mobile files on phone-class
+devices only (screen short side ≤600 CSS px — tablets and iPads get the master) and
+falls back to the desktop clip when absent. Scripts in `references/pipeline.md` §6; for
+the hero-reframe / portrait-chain tiers see §7. If the user chose crop-safe, skip this —
+the engine still hardens phone scrubbing regardless (seek-coalescing, iOS priming, Low
+Power Mode stills fallback), so the page degrades gracefully rather than breaking.
 
 ---
 
@@ -452,15 +463,21 @@ scenes a higher `scroll` + some `linger`; keep transit scenes brisk. Theme it wi
 `--sw-bg`, `--sw-ink`, …) — the visual identity comes from the generated clips, so the
 chrome stays quiet. See the header of `scrub-engine.js` for the full config + CSS vars.
 
-**On phones the engine adapts automatically** (coarse pointer or ≤860px): it serves
-`clipMobile` / `connectorsMobile` when present, **coalesces seeks** (never queues a new
-`currentTime` while the decoder is still seeking — this is what stops a fast flick from
-freezing the clip), **keeps the still as a poster until the clip paints its first frame**
-and **primes each video on first touch** (fixes iOS's blank-until-played video), drops the
-drifting particles, ignores URL-bar-only resizes (no scroll jump), and uses safe-area
-insets so copy clears the notch/home indicator. All of this hardening is on by default —
-no config needed. The `clipMobile`/`connectorsMobile` encodes are the opt-in **mobile
-beta** part (Step 1.5): only wire them when the user asked for the mobile version.
+**On phones the engine adapts automatically, along two separate axes.** *Clip tier*
+(which file) is decided by device class — screen short side ≤600 CSS px = phone →
+`clipMobile`/`posterMobile`; tablets (iPad Pro included — coarse pointer but
+desktop-class screen and decoder) and desktops get the master. *Behaviour hardening*
+(how it acts) keys off coarse pointer / ≤860px viewport: **coalesced seeks** (never
+queues a new `currentTime` mid-seek — what stops a fast flick freezing the clip),
+poster held until the clip paints, **video priming on first touch** (iOS
+blank-until-played fix), a longer scroll run per scene (`scrollMobileFactor`, default
+1.2 — small viewports read the same flight as faster), dropped particles, URL-bar-safe
+resizes, safe-area insets. **Automatic stills fallback:** `prefers-reduced-motion`,
+Chromium data-saver, and iOS **Low Power Mode** (detected at runtime — a rejected muted
+`play()` on first touch) all flip the page to stills-with-crossfades instead of frozen
+video. On 2g/3g (Chromium signal) the clip prefetch window shrinks. All of this is on
+by default — no config. The `clipMobile`/`connectorsMobile`/`posterMobile` encodes are
+the opt-in tiers from Step 1.5: wire them only when the user picked one.
 
 **SEO copy is not optional — this is a landing page.** The engine renders all copy
 client-side, so on its own the page has zero crawlable text. Always put a plain-markup
@@ -494,10 +511,19 @@ end-to-end:
   or points at the still — Step 6).
 - Check the console for errors, confirm `video.seekable.end(0) > 0` (blob working), and
   that `currentTime` tracks scroll across each clip's band.
-- **Mobile — full checklist only if the user opted into the mobile beta (Step 1.5).**
-  For a desktop-only build, just sanity-check a phone viewport once: page loads, still
+- **Stills-mode fallbacks (every build, cheap to check):**
+  - Data-saver: emulate `navigator.connection.saveData = true` (DevTools override or an
+    init script) — page must render as stills-with-crossfades, zero clip fetches in the
+    Network panel.
+  - Low Power Mode: hardest to emulate — on a real iPhone, enable it and confirm the
+    page falls back to stills on first touch instead of frozen video. Emulated proxy:
+    stub `HTMLMediaElement.play` to return a rejected promise, tap, confirm stills mode.
+  - Tablet tier: iPad viewport (834×1194, touch) must fetch the **desktop** clip
+    (Network panel), not the `-m.mp4` — while still getting touch behaviour.
+- **Mobile — full checklist only if the user picked a mobile tier (Step 1.5).**
+  For a crop-safe build, just sanity-check a phone viewport once: page loads, still
   posters show, nothing overlaps — the engine's hardening covers graceful degradation.
-  For the beta (do this on a real phone or an emulated one, portrait + landscape):
+  For the mobile tiers (do this on a real phone or an emulated one, portrait + landscape):
   - Emulate a phone viewport **with CPU throttled 4–6×** and scroll fast — the clip should
     track without freezing (the seek-coalescing + `-m.mp4` encodes are what make this hold).
   - Confirm the first scene shows immediately (its still is the poster) and the video takes

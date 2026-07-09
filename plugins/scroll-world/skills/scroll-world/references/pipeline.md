@@ -225,9 +225,9 @@ not exact — the engine crossfade usually covers it), <0.75 means a still was u
 endpoint or the wrong frame was extracted — regenerate, don't rationalize. Run this
 after every re-roll too: replacing one clip can silently break BOTH of its seams.
 
-## 6. Mobile encodes (Step 6) — mobile beta, only if the user opted in
+## 6. Mobile encodes (Step 6) — only if the user picked a mobile tier
 
-**Skip this section unless the user chose the mobile (beta) version in the Step 1
+**Skip this section if the user chose the crop-safe tier in the Step 1
 interview.** Scrubbing sets `currentTime` every frame, and a phone decoder's **seek cost scales with
 how many frames it must decode from the nearest keyframe** — so a 1080p `-g 8` master
 that scrubs fine on a laptop stutters on a phone. A **smaller frame + tighter GOP** fixes
@@ -243,19 +243,60 @@ for n in $NAMES; do encm "$WORK/dive_$n.mp4" "$ASSETS/vid/$n-m.mp4"; done
 i=0; for f in "$WORK"/conn_*.mp4; do i=$((i+1)); encm "$f" "$ASSETS/vid/conn$i-m.mp4"; done
 ```
 
-Wire the variants in the engine config — the engine serves them automatically on phones,
-falling back to the desktop `clip` when a mobile one is absent:
+Extract each mobile encode's first frame as its poster (§5b doctrine — the poster must
+match the encode the device actually gets):
+
+```bash
+for n in $NAMES; do
+  ffmpeg -v error -y -ss 0 -i "$ASSETS/vid/$n-m.mp4" -frames:v 1 -q:v 2 "$WORK/poster_${n}_m.png"
+  cwebp -quiet -q 84 "$WORK/poster_${n}_m.png" -o "$ASSETS/$n-poster-m.webp"
+done
+```
+
+Wire the variants in the engine config — the engine serves them on phone-class devices
+(screen short side ≤600 CSS px; tablets/iPads get the master), falling back to the
+desktop `clip` when a mobile one is absent:
 
 ```js
-sections[k].clipMobile = 'assets/vid/<name>-m.mp4';
+sections[k].clipMobile   = 'assets/vid/<name>-m.mp4';
+sections[k].posterMobile = 'assets/<name>-poster-m.webp';
 connectorsMobile = ['assets/vid/conn1-m.mp4', …];   // length N-1, in order
 ```
 
 If phone scrubbing still stutters, tighten the GOP further (`-g 2`, or `-g 1` for all-intra
 = instant seeks at the cost of larger files); if cellular weight is the bigger worry, raise
 `crf` (24–26) or drop to `scale=-2:600`. If the master is already 720p (e.g. kling3_0 std),
-the mobile encode still pays off — the tighter GOP is what makes phone seeks cheap. All-mobile encodes stay 16:9 — the engine
-centre-crops them; see the portrait note in SKILL Step 8 / prompts.md.
+the mobile encode still pays off — the tighter GOP is what makes phone seeks cheap.
+Plain mobile-tier encodes stay 16:9 — the engine centre-crops them; for true portrait
+assets see §7.
+
+## 7. Portrait tiers (Step 1.5 hero-reframe / full portrait chain) — extra credits
+
+The gold standard for mobile is a **differently-framed render, not a crop** (Apple ships
+re-art-directed per-breakpoint assets). Two levels:
+
+**Hero reframe (cheap).** For the 1–2 scenes whose focal subject can't hold a centre
+crop (usually hero + finale): regenerate JUST those stills at 9:16 (same prompt + style
+anchor, recompose vertically), render a 9:16 dive from each, encode with `encm()`
+settings, wire as that scene's `clipMobile`/`posterMobile`. Other scenes keep the
+cropped 16:9 mobile encode. Seams: a portrait dive still hands off within its own clip
+only, so nothing about the 16:9 chain changes — the phone crossfades between a cropped
+connector and the portrait dive; keep the reframed composition centred on the same focal
+point so the transition reads.
+
+**Full portrait chain (gold, ≈2× video credits).** A complete parallel 9:16 chain:
+
+- 9:16 stills (or reuse 16:9 stills as `--image` style refs and prompt the vertical
+  recomposition), then the full Step 4/5 flow at `--aspect_ratio 9:16` — own frame
+  extractions, own connectors, own handoffs. **Aspect ratios cannot mix mid-chain**: a
+  9:16 clip can't continue a 16:9 frame, so the portrait chain is generated end-to-end
+  as its own world.
+- Run the §5c SSIM gate on the portrait chain separately (its own seam list).
+- Encode with `encm()` (already 720-class; portrait at `scale=720:-2`), extract portrait
+  posters, wire ALL of it as `clipMobile`/`connectorsMobile`/`posterMobile`.
+- Same-model rule, same NSFW re-roll budget — everything from the 16:9 chain applies.
+
+State the credit cost to the user before starting either tier (SKILL Step 1.5).
 
 ## Notes
 

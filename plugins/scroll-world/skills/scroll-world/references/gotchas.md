@@ -49,6 +49,21 @@ list. Symptom → cause → fix.
   until the clip paints and priming each video on first touch — so **don't** hide the
   poster on `loadedmetadata` or strip the `playsinline`/`muted` attributes if you adapt the
   engine into a framework.
+- **Frozen video on iOS with battery saver on** → iOS **Low Power Mode** rejects even a
+  muted, playsinline `play()`, and `currentTime` scrubbing doesn't work either — no video
+  technique survives it. The engine detects the rejected prime on first touch and flips
+  the whole page to stills-with-crossfades. If you adapt the engine, keep that fallback:
+  a `.catch()` on the priming `play()` that enters stills mode.
+- **iPad gets blurry 720p video** → clip tier was keyed to pointer type. iPadOS reports a
+  coarse pointer AND a desktop Mac UA — both useless signals. The engine tiers by screen
+  short side (≤600 CSS px = phone); if you port it, keep that rule (or decide by
+  `clientWidth × devicePixelRatio`), never by pointer/UA.
+- **Data-saver / 2g users pull the full blob payload** → Chromium exposes
+  `navigator.connection.saveData` / `effectiveType`; iOS exposes nothing. The engine's
+  answer: conservative default for everyone (posters first, lazy blob fetch near the
+  viewport), stills mode on `saveData`, shrunken prefetch window on 2g/3g. Don't invert
+  it (heavy default + downgrade-on-signal) — the devices most on cellular are iPhones,
+  which can't signal.
 - **Page jumps while scrolling on mobile** → something is re-running layout on the URL-bar
   show/hide `resize`. The engine ignores height-only resizes on touch; if you ported it, gate
   your resize handler on a width change (keep the `orientationchange` path for rotation).
