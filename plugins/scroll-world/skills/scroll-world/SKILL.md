@@ -21,9 +21,11 @@ cuts. The visuals are AI-generated (Higgsfield); the page just scrubs pre-render
 by scroll position. This is the same technique behind Apple's scroll-through product
 pages — the camera genuinely moves, scroll only drives time.
 
-**What you generate:** N scene stills → N "dive-in" camera clips → N-1 "connector" clips
-that join consecutive scenes seamlessly → a portable scrub engine that plays the whole
-chain as one flight.
+**What you generate:** N scene stills (anchor-gated) → N "dive-in" camera clips → N-1
+"connector" clips that join consecutive scenes seamlessly → encoded clips + extracted
+posters → an automated SSIM seam check → a portable scrub engine that plays the whole
+chain as one flight. Chain clips render on the cheap previz tier first by default;
+full-model credits are spent only after the user approves the draft.
 
 **The one rule that makes or breaks it:** seams must be *frame-identical*. Read
 [The seamless chain](#step-5--the-seamless-chain-the-critical-part) before generating any
@@ -109,6 +111,15 @@ names a preference, honor it **only if it can frame-lock seams** (Step 4 roster:
 a model that can't frame-lock is declined with a one-line why, not substituted in — use a
 roster model instead.
 
+**Close the interview with a spend estimate — get explicit go-ahead before any
+generation.** State the bill in plain numbers: `N` image gens + a draft-tier previz
+chain (`2N-1` mini video gens, recommended — see Step 4) + `2N-1` full-model video gens
++ a re-roll budget (~20–30% extra on interiors, thanks to the NSFW filter), and roughly
+how long it runs (gens are 3–8 min each; architecture A is sequential). The user
+approves the spend once, here — after that the only further gates are the anchor-still
+approval (Step 2) and the previz review (Step 4), both of which exist to keep the
+big spend from being wasted, not to re-ask permission.
+
 Keep the scroll mechanic fixed (continuous fly-through) — that's the point of the skill.
 See `references/prompts.md` for the intake checklist and copy structure.
 
@@ -130,16 +141,22 @@ contact shadow. <PALETTE hexes>. No text, no letters, no logos, centered, 3:2.
 Subject: <what is in THIS diorama>.
 ```
 
-- Run all N concurrently, detached. Command per scene:
-  `higgsfield generate create gpt_image_2 --prompt "$(cat scene_i.txt)" --aspect_ratio 3:2 --resolution 2k --quality high --wait --wait-timeout 15m --json > scene_i.json 2>scene_i.err`
+- **Anchor first — never batch all N cold.** Generate ONE anchor still (the most
+  representative scene), show it to the user, and iterate the style preamble until they
+  approve. Only then batch the remaining N-1 **with the approved anchor passed as
+  `--image`** to lock the style. A style miss on the anchor costs 1 gen; after a cold
+  batch it costs N. This is a hard gate — do not proceed past an unapproved anchor.
+- Batch the rest concurrently, detached. Command per scene:
+  `higgsfield generate create gpt_image_2 --prompt "$(cat scene_i.txt)" --image anchor.png --aspect_ratio 3:2 --resolution 2k --quality high --wait --wait-timeout 15m --json > scene_i.json 2>scene_i.err`
 - Result URL is `.[]0.result_url` in the `--wait --json` output. `curl` it down.
 - A generation may fail transiently (HTTP 503) — re-roll that one individually; don't
   restart the batch.
-- **Review the stills before continuing.** They must read as one cohesive world (same
-  angle, palette, light). If one is off-style, regenerate it, optionally passing an
-  approved scene as `--image` to lock style.
+- **Review the batch before continuing.** It must read as one cohesive world (same
+  angle, palette, light). Re-roll any off-style scene individually — the anchor style
+  lock stays in force.
 
-See `references/pipeline.md` for the exact batch script.
+See `references/pipeline.md` for the exact batch script (idempotent — re-runs skip
+finished assets, so a crash or re-roll never repays for done work).
 
 ---
 
@@ -151,7 +168,9 @@ solid box, knock out the flat background to transparency with
 matches the bg, e.g. cream walls). Then encode to webp. If you'd rather keep it simple,
 just make the page background the same colour as the scene background and skip this.
 
-These stills double as **video posters and lazy-load fallbacks**, so keep them.
+Keep the stills either way — they're the **reduced-motion artwork and no-clip
+fallback**. (Loading posters are NOT the stills: they're extracted from the encoded
+clips in Step 6, so the still→video swap can't pop.)
 
 ---
 
@@ -182,6 +201,14 @@ connectors; it also takes a different flag set — no `--mode`, has `--resolutio
 doesn't drop into the pipeline as-is. It's not in the default roster; only reach for it, and
 wire it by hand, if architecture A's sequential render time is a proven bottleneck and you've
 benchmarked it as actually faster.)
+
+**Previz first (default, not optional-extra).** Unless the run is small (≤4 scenes),
+render the whole chain on `seedance_2_0_mini` first. It frame-locks, so everything that
+matters — journey order, camera grammar, seam continuity, copy pacing against the scrub —
+is validated at draft cost; assemble the page from the previz clips and review it with
+the user before a single full-model credit is spent. Then clear the draft clips, flip
+`$VMODEL`, and re-render final (stills are reused; the pipeline's idempotency makes the
+second pass mechanical — `references/pipeline.md`, setup block).
 
 Rules:
 - **One model for all chained clips.** Each renderer has its own motion/color/grain
@@ -335,6 +362,12 @@ engine still applies a **short crossfade** (a few frames) at each seam. Frame-ma
 endpoints + a small crossfade = no visible cut. Never skip the actual-frame handoff and
 rely on the crossfade alone; a big content jump can't be hidden by a crossfade.
 
+Whether a handoff actually held is **machine-checkable** — don't wait for the browser
+QA to find out. After encoding, run the SSIM seam check (`references/pipeline.md` §5c):
+a true actual-frame handoff scores ≥0.95 across the boundary; <0.75 means an endpoint
+was a still or the wrong frame. Run it again after every re-roll — replacing one clip
+silently touches BOTH of its seams.
+
 ---
 
 ## Step 6 — Encode for smooth scrubbing
@@ -362,6 +395,16 @@ ffmpeg -i src.mp4 -an -vf "unsharp=5:5:0.8:5:5:0.0" \
 
 Encode all 2N-1 clips (dives + connectors) with the same settings for uniform quality.
 
+**Extract posters from the ENCODED clips** (`references/pipeline.md` §5b). The still is
+a 3:2 image; the clip is a 16:9 *re-render* of it — if the still is the loading poster,
+the first video paint visibly jumps (crop + render drift) on the very first scene a
+visitor sees. Same doctrine as the connectors, applied to seam zero: the poster must be
+the clip's own extracted first frame. Wire it as `sections[k].poster` (Step 7); keep the
+still as the reduced-motion artwork.
+
+Then run the **automated seam check** (`references/pipeline.md` §5c) before touching a
+browser — every seam SSIM ≥0.90 or you have a redo, not a QA note.
+
 **Mobile encodes (beta — only if the user opted in at Step 1.5).** Phone video decoders seek
 far slower than a laptop's, and seek cost scales with GOP length, so the 1080p `-g 8` master
 that scrubs smoothly on desktop can stutter on a phone. Produce a lighter `-m.mp4` sibling for
@@ -386,6 +429,7 @@ mountScrollWorld(document.getElementById('world'), {
   diveScroll: 1.3, connScroll: 0.9,          // viewport-heights of scroll per clip
   sections: [
     { id:'farm', label:'The Farms', still:'assets/farm.webp',
+      poster:'assets/farm-poster.webp',          // encoded clip's extracted first frame (Step 6)
       clip:'assets/vid/farm.mp4', clipMobile:'assets/vid/farm-m.mp4',   // mobile beta only
       scroll: 1.6, linger: 0.45,   // optional pacing: longer dwell + camera settles mid-scene
       accent:'#8FB98A', eyebrow:'From leaf to last sip', title:'It starts in the hills.',
@@ -418,6 +462,13 @@ insets so copy clears the notch/home indicator. All of this hardening is on by d
 no config needed. The `clipMobile`/`connectorsMobile` encodes are the opt-in **mobile
 beta** part (Step 1.5): only wire them when the user asked for the mobile version.
 
+**SEO copy is not optional — this is a landing page.** The engine renders all copy
+client-side, so on its own the page has zero crawlable text. Always put a plain-markup
+mirror of the copy (h1 = hero line, one h2 + p per scene, real CTA links) inside the
+container in a `data-sw-seo` block — the engine hides it on mount, crawlers/link
+previews/no-JS visitors read it from the served HTML. `references/index-template.html`
+ships the block; when adapting into a framework, server-render it.
+
 For non-JS backends (Python/Rails/etc.): serve the assets and drop the engine `<script>`
 into the rendered HTML; nothing about it is framework-specific.
 
@@ -425,13 +476,22 @@ into the rendered HTML; nothing about it is framework-specific.
 
 ## Step 8 — QA the seams (don't skip)
 
-Drive the page in a headless browser and **verify frame continuity at the seams**, which
-is the thing most likely to be wrong:
+**First, the machine check:** the SSIM seam gate (`references/pipeline.md` §5c) must
+already be green — every seam ≥0.90 (0.75–0.90 only where you've eyeballed the
+crossfade and accepted it). If you skipped it, run it now; browser QA below verifies
+the *page*, the SSIM gate verifies the *assets*, and a red asset can't be QA'd into a
+green page.
+
+Then drive the page in a headless browser and **verify frame continuity at the seams**
+end-to-end:
 
 - Screenshot at scroll positions just before and just after each seam. The two frames
   must be near-identical (the dive's last frame == the connector's first frame). If they
   pop, you used the diorama still instead of the actual rendered frame (redo Step 5), or
   the crossfade band is too short.
+- Confirm the first paint is clean: the poster (extracted frame) shows instantly, and
+  the poster→video takeover does not shift the image (if it does, `poster` is missing
+  or points at the still — Step 6).
 - Check the console for errors, confirm `video.seekable.end(0) > 0` (blob working), and
   that `currentTime` tracks scroll across each clip's band.
 - **Mobile — full checklist only if the user opted into the mobile beta (Step 1.5).**
@@ -454,80 +514,43 @@ is the thing most likely to be wrong:
 
 ---
 
-## Gotchas (hard-won)
+## Gotchas — top 5 inline; full list in `references/gotchas.md`
+
+Read `references/gotchas.md` the moment any generation fails or any QA check reads
+wrong — it maps symptom → cause → fix for every failure seen in production (encode,
+theming, phone, iOS, Kling flags, portrait crops, and more). The five that block runs
+most often:
 
 - **Seam pop** → connector endpoints were the diorama stills, not the neighbouring
-  clips' actual frames. Always extract real frames (Step 5).
-- **Seam stutter / camera "jumps backward"** → even with frame-matched seams, if the
-  camera *velocity reverses* (forward dive, then a connector that pulls back out) it
-  reads as a rewind. This is inherent to architecture B. For any grounded walkthrough use
-  architecture A (one continuous forward take — legs chained from actual last frames, no
-  pull-back, no `--end-image`); see Step 4.
-- **Frozen video / stuck at frame 0** → `seekable=[0,0]`; the host isn't serving byte
-  ranges. Use blob URLs (engine does).
-- **Huge files** → you used all-intra. Use `-g 8` + blob instead.
-- **Soft / low quality** → you downscaled or over-compressed. Encode native 1080p,
-  crf ≤ 20, add `unsharp`. Video is inherently softer than the stills — keep the stills
-  as the lite fallback for max fidelity.
-- **Concurrent gens 503 / "not_enough_credits" race** → transient when many launch at
-  once; re-roll the individual failure, it's not really out of credits (verify with
-  `higgsfield workspace list`).
-- **NSFW false-positives (Seedance `status "nsfw"`)** → the video content filter flags
-  perfectly innocuous clips, especially **bedroom, pool, spa/wellness** contexts and
-  trigger words like "bed", "pool", "waterfall", "wine", "swim". It's partly the prompt
-  wording and partly the reference frames. Fixes, in order: (1) re-roll — it's often
-  non-deterministic and passes on the 2nd–3rd try; (2) strip trigger words and add
-  "empty, unoccupied, no people, no figures, architectural, tasteful"; (3) regenerate
-  just that clip on **`kling3_0`** with the same start/end frames — a different
-  provider's filter often passes what Seedance blocks. Expect a slight render-character
-  shift on that one clip (each model has its own grain/motion feel); for a 5s connector
-  behind a crossfade that usually beats option (4): set the connector slot to `null` —
-  the engine crossfades that seam directly (optional connectors), so the page still
-  completes. Budget extra credits/time for these re-rolls on interiors/real-estate content.
-- **Dark / custom theme** → the engine wraps its default tokens in `@layer sw`, so a
-  page-level `:root` / `.sw-root { --sw-bg; --sw-ink; --sw-accent; --sw-font-* }` block
-  wins cleanly (no specificity hacks). `--sw-ink` is your primary **text/heading** colour;
-  the **accent** fills the primary button and active nav. For a dark theme, set `--sw-bg`
-  dark and `--sw-ink` light — the copy scrim and title shadow follow `--sw-bg` automatically.
-- **Phone scrub stutters / freezes on a fast flick** → the 1080p master is too heavy for a
-  phone decoder and seeks pile up. Ship the `-m.mp4` mobile encodes (720p, `-g 4`) and wire
-  `clipMobile`/`connectorsMobile` (Step 6/7). The engine already coalesces seeks; the lighter
-  encode is the other half. Still choppy on a low-end device? Tighten GOP (`-g 2` / all-intra).
-- **Blank / black scene on iOS (desktop was fine)** → an iOS Safari quirk: a muted video that
-  was never played won't paint a seeked frame. The engine fixes this by keeping the still as a
-  poster until the clip paints and priming each video on first touch — so **don't** hide the
-  still on `loadedmetadata` or strip the `playsinline`/`muted` attributes if you adapt the
-  engine into a framework.
-- **Page jumps while scrolling on mobile** → something is re-running layout on the URL-bar
-  show/hide `resize`. The engine ignores height-only resizes on touch; if you ported it, gate
-  your resize handler on a width change (keep the `orientationchange` path for rotation).
-- **Copy hidden behind the URL bar / notch on mobile** → use the engine's safe-area-aware
-  bottom offset (`env(safe-area-inset-bottom)` + `dvh`); make sure the page's
-  `<meta viewport>` includes `viewport-fit=cover` (the template does).
-- **Portrait crops the scene** → a 16:9 clip on a tall phone shows only its centre. Keep each
-  scene's focal subject centred with a little headroom (prompts.md), or generate a 9:16 hero
-  for the scenes that matter most. The engine centre-crops (`object-fit:cover`); it can't
-  un-crop a widescreen composition.
-- **`--generate-audio` errors on seedance** → omit it; mute in HTML and `-an` on encode.
-- **Kling rejects your flags** → `kling3_0` has **no `--resolution` param** (don't pass
-  one; encode at whatever native res ffprobe reports) and **sound defaults on** — pass
-  `--sound off`. Duration default is 5; legs/dives want 10.
-- **Seam pop only where you "saved credits"** → you swapped models mid-chain, or used a
-  start-image-only model where a connector needs an `--end-image`. One model for the whole
-  chain; the only cheap tier is `seedance_2_0_mini`, which keeps frame-locking so it stays
-  seamless. (Any model with reference-only inputs can't hold a seam at all — Step 4.)
-- **White-box scenes** → `gpt_image_2` returns a solid bg; either match the page bg to it
-  or knock it out (Step 3).
-- **bash 3.2** on macOS → no associative arrays in scripts.
+  clips' actual frames. Always extract real frames (Step 5); the SSIM gate (pipeline
+  §5c) catches this before a browser ever opens.
+- **Seam stutter / camera "jumps backward"** → camera *velocity reverses* across a seam
+  (inherent to architecture B's pull-outs). Grounded walkthroughs must use
+  architecture A (Step 4).
+- **NSFW false-positives (Seedance `status "nsfw"`)** → flags innocuous interiors
+  (bedroom/pool/spa; words like "bed", "wine", "swim"). In order: re-roll (often passes
+  2nd–3rd try) → strip trigger words + add "empty, unoccupied, no people, architectural"
+  → regenerate that one clip on `kling3_0` with the same start/end frames → set the
+  connector slot to `null` (engine crossfades that seam directly). Budget re-rolls on
+  interiors.
+- **Frozen video / stuck at frame 0** → host doesn't serve byte ranges, `seekable=[0,0]`.
+  Blob URLs fix it (engine does this).
+- **Concurrent gens 503 / "not_enough_credits" race** → transient under parallel launch;
+  re-roll the individual failure (verify credits with `higgsfield workspace list`).
 
 ## References
 
 - `references/prompts.md` — the intake checklist, style-preamble pattern, and every
   prompt template (scene still, dive, connector) with fill-in slots.
-- `references/pipeline.md` — copy-paste batch scripts for the whole run (generate →
-  extract frames → connectors → encode → mobile encode), bash-3.2-safe.
+- `references/pipeline.md` — copy-paste batch scripts for the whole run (anchor-gated
+  stills → previz → dives → frames → connectors → encode → posters → SSIM seam gate →
+  mobile encode), idempotent + bash-3.2-safe.
 - `references/scrub-engine.js` — the portable, config-driven scrub engine (builds DOM +
-  injects CSS; blob-seek, lazy load, seam crossfade, copy, route rail, reduced-motion, and
-  phone hardening: mobile encodes, seek-coalescing, iOS priming, safe-area, no-jump resize).
-- `references/index-template.html` — a minimal standalone page that mounts the engine.
+  injects CSS; blob-seek, lazy load, seam crossfade, extracted-frame posters, hidden
+  `data-sw-seo` static-copy block, copy, route rail, reduced-motion, and phone hardening:
+  mobile encodes, seek-coalescing, iOS priming, safe-area, no-jump resize).
+- `references/index-template.html` — a minimal standalone page that mounts the engine,
+  including the crawlable `data-sw-seo` copy block.
 - `references/knockout.py` — border-connected background knockout for floating scenes.
+- `references/gotchas.md` — the full symptom → cause → fix list, plus the canvas
+  frame-sequence alternative for when video scrubbing isn't smooth enough.

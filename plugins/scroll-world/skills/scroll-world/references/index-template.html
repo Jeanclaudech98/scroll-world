@@ -17,7 +17,21 @@
 </head>
 <body>
   <div id="top"></div>
-  <div id="world"></div>
+  <div id="world">
+    <!-- Static SEO copy: the ONLY crawlable text on the page (the engine renders its
+         copy client-side). Mirror the real section copy here — h1 = hero line, one
+         h2 + p per scene, real CTA links. The engine hides this block on mount. -->
+    <section data-sw-seo>
+      <h1>The hero line.</h1>
+      <p>One-sentence pitch for BRAND — what the world is and why it matters.</p>
+      <h2>Value prop label — Scene A headline</h2>
+      <p>Scene A body sentence.</p>
+      <!-- …one h2 + p per scene… -->
+      <h2>And it all pours into — One perfect thing.</h2>
+      <p>The payoff sentence.</p>
+      <p><a href="#">Get started</a> · <a href="#">See more</a></p>
+    </section>
+  </div>
 
   <script src="scrub-engine.js"></script>
   <script>
@@ -33,6 +47,7 @@
         {
           id: 'sceneA', label: 'Scene A',
           still: 'assets/sceneA.webp',
+          poster: 'assets/sceneA-poster.webp',     // encoded clip's extracted first frame (pipeline §5b)
           clip: 'assets/vid/sceneA.mp4',
           clipMobile: 'assets/vid/sceneA-m.mp4',   // mobile beta only: lighter 720p encode served on phones
           accent: '#8FB98A',
@@ -46,6 +61,7 @@
         {
           id: 'finale', label: 'The Product',
           still: 'assets/product.webp',
+          poster: 'assets/finale-poster.webp',
           clip: 'assets/vid/finale.mp4',
           clipMobile: 'assets/vid/finale-m.mp4',
           accent: '#9B7EBD',

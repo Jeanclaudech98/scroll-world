@@ -15,7 +15,12 @@
        nav: true,         // show the top section nav
        atmosphere: true,  // subtle gradient + drifting particles behind the clips
        sections: [
-         { id, label, still, clip, clipMobile, accent,
+         { id, label, still, poster, clip, clipMobile, accent,
+                          // `poster` = the EXTRACTED FIRST FRAME of the encoded clip
+                          // (pipeline.md §5b). Shown while the clip loads, so the
+                          // still→video swap is pixel-identical (no crop/render pop).
+                          // Falls back to `still` when absent; `still` remains the
+                          // reduced-motion / no-clip artwork.
            scroll: 1.6,   // optional per-section override of diveScroll — more scroll
                           // distance = a slower, longer dwell in this scene
            linger: 0.5,   // optional 0..1 — remaps time so the camera settles mid-scene
@@ -51,9 +56,17 @@
      --sw-accent     default accent (each section overrides via its `accent`)
      --sw-font-display / --sw-font-body
 
+   SEO / STATIC COPY
+     The engine builds its DOM client-side, so on its own the page has no crawlable
+     copy. Put a plain-markup version of the copy (h1 + per-section h2/p, real links)
+     inside the container in a block marked `data-sw-seo` — the engine hides it on
+     mount and it never fights the visual layer, but it exists in the served HTML for
+     crawlers, link previews, and no-JS visitors (see index-template.html).
+
    REQUIREMENTS ON YOUR ASSETS
      - clips encoded native-res, crf~20, -g 8, +faststart, no audio (see pipeline.md)
      - connectors' endpoints are the neighbouring dives' ACTUAL frames (see SKILL Step 5)
+     - posters extracted from the ENCODED clips' first frames (pipeline.md §5b)
      - (optional) mobile variants at ~720p, -g 4 for smoother phone scrubbing
    The engine loads each clip as a Blob (always seekable) and scrubs currentTime; it does
    NOT depend on HTTP byte-range support.
@@ -78,12 +91,15 @@ function mountScrollWorld(container, config) {
 
   injectCSS();
   container.classList.add('sw-root');
+  // Server-rendered SEO copy (crawlers/no-JS read it from the HTML); once the
+  // engine mounts, the visual layer takes over and the static block hides.
+  container.querySelectorAll('[data-sw-seo]').forEach(n => { n.hidden = true; });
 
   // ---- build the interleaved segment chain: dive0, conn0, dive1, … diveN-1 ----
   const SEGMENTS = [];
   SECTIONS.forEach((s, i) => {
-    const dive = { kind: 'dive', si: i, clip: s.clip, clipM: s.clipMobile, still: s.still, accent: s.accent,
-                   w: s.scroll || DIVE_W, linger: s.linger || 0 };
+    const dive = { kind: 'dive', si: i, clip: s.clip, clipM: s.clipMobile, still: s.still, poster: s.poster,
+                   accent: s.accent, w: s.scroll || DIVE_W, linger: s.linger || 0 };
     SEGMENTS.push(dive);
     s._seg = dive;
     // A connector is optional: if connectors[i] is falsy, the two dives simply
@@ -91,7 +107,8 @@ function mountScrollWorld(container, config) {
     // connector can't be generated (e.g. a content-filter false-positive).
     if (i < N - 1 && CONNECTORS[i]) {
       SEGMENTS.push({ kind: 'conn', si: i, clip: CONNECTORS[i], clipM: CONNECTORS_M[i],
-                      still: SECTIONS[i + 1].still, accent: SECTIONS[i + 1].accent, w: CONN_W });
+                      still: SECTIONS[i + 1].still, poster: SECTIONS[i + 1].poster,
+                      accent: SECTIONS[i + 1].accent, w: CONN_W });
     }
   });
   const NSEG = SEGMENTS.length;
@@ -134,7 +151,11 @@ function mountScrollWorld(container, config) {
   SEGMENTS.forEach(s => {
     const scene = el('div', 'sw-scene'); scene.style.setProperty('--sw-accent', s.accent || '');
     const img = el('img', 'sw-scene__still'); img.alt = ''; img.decoding = 'async'; img.loading = 'lazy';
-    if (s.still) img.src = s.still;
+    // Prefer the extracted-frame poster (pixel-identical to the clip's first frame,
+    // so the still→video swap can't pop). Under reduced-motion the clip never loads,
+    // so the higher-fidelity source still is the better permanent image.
+    const posterSrc = (!reduce && s.poster) ? s.poster : s.still;
+    if (posterSrc) img.src = posterSrc;
     scene.appendChild(img); stage.appendChild(scene);
     s.el = scene; s.img = img; s.video = null; s.hasClip = false;
     s.loading = false; s.ready = false; s.cur = 0; s.target = 0; s.visible = false;
