@@ -270,7 +270,7 @@ the mobile encode still pays off — the tighter GOP is what makes phone seeks c
 Plain mobile-tier encodes stay 16:9 — the engine centre-crops them; for true portrait
 assets see §7.
 
-## 7. Portrait tiers (Step 1.5 hero-reframe / full portrait chain) — extra credits
+## 7. Portrait tiers (Step 1.6 hero-reframe / full portrait chain) — extra credits
 
 The gold standard for mobile is a **differently-framed render, not a crop** (Apple ships
 re-art-directed per-breakpoint assets). Two levels:
@@ -296,7 +296,7 @@ point so the transition reads.
   posters, wire ALL of it as `clipMobile`/`connectorsMobile`/`posterMobile`.
 - Same-model rule, same NSFW re-roll budget — everything from the 16:9 chain applies.
 
-State the credit cost to the user before starting either tier (SKILL Step 1.5).
+State the credit cost to the user before starting either tier (SKILL Step 1.6).
 
 ## Notes
 

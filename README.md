@@ -1,5 +1,13 @@
 # scroll-world
 
+> **Fork notice** — this is [cth9191's](https://github.com/cth9191/scroll-world) hardened fork of
+> [oso95/scroll-world](https://github.com/oso95/scroll-world): budget tiers + spend gates
+> (a 6-scene run is ~17 paid generations upstream — this fork asks first and offers 8-gen
+> lean runs), a previz draft pass, automated SSIM seam verification, extracted-frame
+> posters, an iOS Low Power Mode fallback, device-class clip tiering (iPads get the 1080p
+> master), data-saver handling, true 9:16 portrait tiers, and a crawlable SEO copy block.
+> Engine configs stay backward compatible. Full diff: [FORK-CHANGES.md](FORK-CHANGES.md).
+
 
 https://github.com/user-attachments/assets/b08e641e-985b-4bd4-83ff-6750272d0c37
 

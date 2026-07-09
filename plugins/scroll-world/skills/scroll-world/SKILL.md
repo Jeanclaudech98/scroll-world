@@ -45,8 +45,9 @@ not the framework.
 1. **Higgsfield CLI.** If `higgsfield` is not on `$PATH`, install per the
    `higgsfield-generate` skill. If `higgsfield workspace list` fails auth, ask the user
    to run `higgsfield auth login` (interactive OAuth — you cannot run it) and, if needed,
-   `higgsfield workspace set <id>`. Confirm there are enough credits: a full run is
-   roughly `N` image gens + `(2N-1)` video gens.
+   `higgsfield workspace set <id>`. Confirm there are enough credits: a run is `N` image
+   gens + `N` video gens (architecture A) or `(2N-1)` video gens (architecture B), plus
+   re-rolls — the Step 1 budget tier sets `N`.
 2. **ffmpeg / ffprobe** on `$PATH` (frame extraction + encoding).
 3. **An image tool** for background knockout if you want floating scenes: PIL
    (`python3 -c "import PIL"`), or `cwebp`/`sips`. Optional — see Step 3.
@@ -84,13 +85,32 @@ default. Cover:
    tilt-shift miniature, warm light." Offer alternatives (flat papercraft, glossy toy,
    claymation, neon night). Whatever is chosen becomes the shared **style preamble**
    reused verbatim in every scene prompt (this is what makes the world cohesive).
-4. **The journey (sections)** — the ordered scenes the camera flies through. Propose a
-   set derived from the subject's own value chain and let the user edit. 5–7 works well.
-   Boba example: farms → pearl kitchen → flagship shop → delivery → community plaza →
-   the hero product. Each section needs: a short subject description (what's IN the
+4. **Budget tier — ask BEFORE proposing the journey; video generations dominate cost.**
+   The bill scales with scene count and architecture: architecture A (forward take) =
+   `N` videos, architecture B (dives + connectors) = `2N-1` videos, plus `N` stills and
+   a ~20–30% re-roll buffer. A 6-scene arch-B run is ~17 generations — a serious bite
+   out of a subscription. Use `AskUserQuestion` with concrete numbers:
+   - **Lean (~8 gens)** — 4 scenes, architecture A (4 stills + 4 legs), skip previz
+     (small runs re-roll cheaper than a draft pass). Same site, same continuous flight —
+     just 4 beats instead of 6.
+   - **Standard (~11–13 gens)** — 5 scenes; arch A (10 gens) or arch B (5 + 9 = 14).
+   - **Showcase (~17+ gens)** — 6–7 scenes, full arch-B world, previz pass, mobile tiers.
+   **Fewer scenes ≠ thinner site.** 3–4 well-chosen beats read as a complete world: give
+   each scene more scroll distance (`scroll: 1.6–2`) and `linger`, and let the copy
+   carry more per beat. A tight 4-scene world beats a budget-starved 6-scene one.
+   Two more levers when the user wants the B aesthetic on a lean budget: connectors are
+   **individually optional** (a `null` slot crossfades that seam directly — honest
+   tradeoff: that one transition is a dissolve, not a flight; spend connectors on the
+   seams around the hero scenes) and `seedance_2_0_mini` can BE the final model if the
+   user accepts 720p — it frame-locks, so the site stays seamless.
+5. **The journey (sections)** — the ordered scenes the camera flies through, **sized to
+   the budget tier**. Propose a set derived from the subject's own value chain and let
+   the user edit. Boba example (6-scene showcase): farms → pearl kitchen → flagship shop
+   → delivery → community plaza → the hero product; lean 4-scene cut: farms → kitchen →
+   shop → hero product. Each section needs: a short subject description (what's IN the
    diorama), an eyebrow, a headline, one line of body, and 0–3 tag pills. The last
    section is usually the hero product + the CTA.
-5. **Mobile tier — ALWAYS ask this; never silently generate extra assets.** Phones get
+6. **Mobile tier — ALWAYS ask this; never silently generate extra assets.** Phones get
    the full scroll animation in every tier — the engine's hardening (seek-coalescing,
    iOS priming + Low Power Mode stills fallback, safe-area CSS, data-saver downgrade)
    is always on; the tiers only decide what ASSETS exist. Use `AskUserQuestion`,
@@ -119,13 +139,14 @@ a model that can't frame-lock is declined with a one-line why, not substituted i
 roster model instead.
 
 **Close the interview with a spend estimate — get explicit go-ahead before any
-generation.** State the bill in plain numbers: `N` image gens + a draft-tier previz
-chain (`2N-1` mini video gens, recommended — see Step 4) + `2N-1` full-model video gens
-+ a re-roll budget (~20–30% extra on interiors, thanks to the NSFW filter), and roughly
-how long it runs (gens are 3–8 min each; architecture A is sequential). The user
-approves the spend once, here — after that the only further gates are the anchor-still
-approval (Step 2) and the previz review (Step 4), both of which exist to keep the
-big spend from being wasted, not to re-ask permission.
+generation.** State the bill in plain numbers from the chosen budget tier: `N` image
+gens + video gens (`N` for architecture A, `2N-1` for B; previz adds a mini-tier chain
+on showcase runs) + a re-roll budget (~20–30% extra on interiors, thanks to the NSFW
+filter), plus any mobile-tier extras, and roughly how long it runs (gens are 3–8 min
+each; architecture A is sequential). The user approves the spend once, here — after
+that the only further gates are the anchor-still approval (Step 2) and the previz
+review (Step 4), both of which exist to keep the big spend from being wasted, not to
+re-ask permission.
 
 Keep the scroll mechanic fixed (continuous fly-through) — that's the point of the skill.
 See `references/prompts.md` for the intake checklist and copy structure.
@@ -412,7 +433,7 @@ still as the reduced-motion artwork.
 Then run the **automated seam check** (`references/pipeline.md` §5c) before touching a
 browser — every seam SSIM ≥0.90 or you have a redo, not a QA note.
 
-**Mobile encodes (only if the user picked a tier beyond crop-safe at Step 1.5).** Phone
+**Mobile encodes (only if the user picked a tier beyond crop-safe at Step 1.6).** Phone
 video decoders seek far slower than a laptop's, and seek cost scales with GOP length, so
 the 1080p `-g 8` master that scrubs smoothly on desktop can stutter on a phone. Produce a
 lighter `-m.mp4` sibling for every clip — **720p, `-g 4`** (more keyframes = cheaper
@@ -477,7 +498,7 @@ Chromium data-saver, and iOS **Low Power Mode** (detected at runtime — a rejec
 `play()` on first touch) all flip the page to stills-with-crossfades instead of frozen
 video. On 2g/3g (Chromium signal) the clip prefetch window shrinks. All of this is on
 by default — no config. The `clipMobile`/`connectorsMobile`/`posterMobile` encodes are
-the opt-in tiers from Step 1.5: wire them only when the user picked one.
+the opt-in tiers from Step 1.6: wire them only when the user picked one.
 
 **SEO copy is not optional — this is a landing page.** The engine renders all copy
 client-side, so on its own the page has zero crawlable text. Always put a plain-markup
@@ -520,7 +541,7 @@ end-to-end:
     stub `HTMLMediaElement.play` to return a rejected promise, tap, confirm stills mode.
   - Tablet tier: iPad viewport (834×1194, touch) must fetch the **desktop** clip
     (Network panel), not the `-m.mp4` — while still getting touch behaviour.
-- **Mobile — full checklist only if the user picked a mobile tier (Step 1.5).**
+- **Mobile — full checklist only if the user picked a mobile tier (Step 1.6).**
   For a crop-safe build, just sanity-check a phone viewport once: page loads, still
   posters show, nothing overlaps — the engine's hardening covers graceful degradation.
   For the mobile tiers (do this on a real phone or an emulated one, portrait + landscape):

@@ -12,8 +12,9 @@ Collect and write down:
 - `PALETTE` — 4–6 named hexes, e.g. `taro #9B7EBD, cream #F5EDE0, caramel #C88A5A, matcha #8FB98A, plum #3A2E48`. Pick ONE as the scene **background** colour (usually the lightest) and one as the primary **accent**.
 - `TONE` — a word or two (cozy/premium, playful, industrial…).
 - `STYLE` — the art direction (default below).
-- `SECTIONS[]` — ordered list; for each: `id`, `label`, `subject` (what's in the diorama), `eyebrow`, `title`, `body` (≤ 1 sentence), `tags[]` (0–3). Last section = hero product + CTA.
-- `MOBILE` — tier: crop-safe / mobile-encodes / hero-reframe / portrait-chain. **Always asked** (SKILL Step 1.5) with credit costs stated. Gates the `-m.mp4` encodes + `posterMobile` (pipeline §6), the 9:16 renders (pipeline §7), and the full mobile QA. Phones get the full scroll animation in every tier.
+- `BUDGET_TIER` — lean (~8 gens, 4 scenes, arch A) / standard (~11–14) / showcase (17+). **Asked BEFORE the journey** (SKILL Step 1.4) — scene count and architecture follow from it. Video gens dominate cost: arch A = N videos, arch B = 2N-1.
+- `SECTIONS[]` — ordered list **sized to BUDGET_TIER**; for each: `id`, `label`, `subject` (what's in the diorama), `eyebrow`, `title`, `body` (≤ 1 sentence), `tags[]` (0–3). Last section = hero product + CTA.
+- `MOBILE` — tier: crop-safe / mobile-encodes / hero-reframe / portrait-chain. **Always asked** (SKILL Step 1.6) with credit costs stated. Gates the `-m.mp4` encodes + `posterMobile` (pipeline §6), the 9:16 renders (pipeline §7), and the full mobile QA. Phones get the full scroll animation in every tier.
 
 ## Style preamble (default: clay diorama)
 
