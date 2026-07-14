@@ -35,6 +35,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import shutil
 import sys
 import time
 import uuid
@@ -297,6 +298,20 @@ def create_video(args: argparse.Namespace) -> int:
     return 0
 
 
+def doctor(_: argparse.Namespace) -> int:
+    """Safely report whether the installed plugin can run, without contacting Kie."""
+    checks = {
+        "KIE_API_KEY": bool(os.getenv("KIE_API_KEY", "").strip()),
+        "python3": True,
+        "ffmpeg": bool(shutil.which("ffmpeg")),
+        "ffprobe": bool(shutil.which("ffprobe")),
+    }
+    for name, passed in checks.items():
+        print(f"{'PASS' if passed else 'MISSING'}  {name}")
+    print("INFO  no Kie API call or credits used")
+    return 0 if all(checks.values()) else 1
+
+
 def add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--prompt")
     parser.add_argument("--prompt-file")
@@ -310,6 +325,9 @@ def add_common(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Kie.ai provider adapter for scroll-world")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    check = sub.add_parser("doctor", help="Check key and local prerequisites without calling Kie")
+    check.set_defaults(func=doctor)
 
     still = sub.add_parser("still", help="Generate a style-locked scene anchor")
     add_common(still)

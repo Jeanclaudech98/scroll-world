@@ -91,8 +91,14 @@ export KIE_API_KEY='your_kie_key_here'
 claude
 ```
 
-After configuring it, open a new Claude Code session and verify the plugin helper is
-available with `scroll-world-kie --help`. Do not commit a real key to `.env`,
+After configuring it, open a new Claude Code session and ask Claude to run:
+
+```bash
+scroll-world-kie doctor
+```
+
+It reports only whether the key and local prerequisites are present; it does **not** reveal
+the key, contact Kie, or consume credits. Do not commit a real key to `.env`,
 `.claude/settings.json`, project settings, or any frontend environment variable.
 
 ### Kie workflow
