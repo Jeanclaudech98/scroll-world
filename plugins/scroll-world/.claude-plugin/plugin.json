@@ -1,7 +1,7 @@
 {
   "name": "scroll-world-kie",
   "description": "Build an immersive scroll-scrubbed 'fly through the world' landing page for any industry or brand using Kie.ai by default. As the visitor scrolls, a pre-rendered camera flies from outside each scene into its interior, then flows on to the next scene with no cuts — one continuous connected flight. Generates Seedream scene anchors and strict first/last-frame Seedance camera clips, then wires a portable, framework-agnostic scroll-scrub engine.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "Jean-claude Chamandi",
     "email": "jeanclaude.ch98@gmail.com"
