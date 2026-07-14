@@ -39,21 +39,46 @@ git clone https://github.com/cth9191/scroll-world
 cp -R scroll-world/plugins/scroll-world/skills/scroll-world ~/.claude/skills/
 ```
 
+### Kie.ai (default in this fork)
+
+This fork includes a production-oriented [Kie.ai](https://kie.ai) provider adapter for
+scene anchors, Seedance dives, and strict first/last-frame connectors. It uses Kie's
+asynchronous API instead of the Higgsfield CLI.
+
+```bash
+export KIE_API_KEY='...'
+python3 plugins/scroll-world/skills/scroll-world/scripts/kie_generate.py --help
+```
+
+Follow the complete workflow in
+[`kie-pipeline.md`](plugins/scroll-world/skills/scroll-world/references/kie-pipeline.md).
+The original Higgsfield workflow remains documented as an optional upstream-compatible
+alternative.
+
 ## Requirements
+
+### Kie workflow
+
+- A [Kie.ai API key](https://kie.ai/api-key), stored only in `KIE_API_KEY` on the local
+  machine or server secret store.
+- `ffmpeg` / `ffprobe` for frame extraction and encoding.
+- Python 3; the Kie adapter uses only the standard library.
+- Python 3 with Pillow is optional—only for transparent-scene knockout.
+
+### Optional Higgsfield workflow
 
 - The [Higgsfield CLI](https://higgsfield.ai), authenticated (`higgsfield auth login`),
   with credits.
-- `ffmpeg` / `ffprobe` for frame extraction and encoding.
-- Python 3 with Pillow (optional — only for the transparent-scene knockout).
 
 ## What it does
 
-It leans on [Higgsfield](https://higgsfield.ai) for the art: cohesive isometric diorama
-scenes (GPT Image 2) and the camera flights themselves (Seedance image-to-video), scrubbed
-by scroll position — the same technique behind Apple's scroll-through product pages. The
-camera genuinely moves; scroll only drives time. It's **framework-agnostic**: you get the
-Higgsfield pipeline, the prompt templates, and a portable vanilla-JS scrub engine that
-drops into plain HTML, Next.js, Vue, or a Python-served page — nothing assumes a stack.
+It can use [Kie.ai](https://kie.ai) for the art: cohesive scene anchors (Seedream)
+and camera flights (Seedance image-to-video), scrubbed by scroll position—the same
+technique behind Apple's scroll-through product pages. The camera genuinely moves; scroll
+only drives time. The existing Higgsfield path remains available, but Kie is the default
+provider documented in this fork. It is **framework-agnostic**: you get the provider
+pipeline, prompt templates, and a portable vanilla-JS scrub engine that drops into plain
+HTML, Next.js, Vue, or a Python-served page.
 
 When invoked, the skill:
 
@@ -89,10 +114,12 @@ handling, a crawlable SEO copy block, and Higgsfield's quirks.
 
 ```
 skills/scroll-world/
-├── SKILL.md                    the procedure + budget/mobile tiers + the seam rule
+├── SKILL.md                    procedure, budget/mobile tiers, seam rule, Kie default
+├── scripts/
+│   └── kie_generate.py         Kie upload → async task → poll → download adapter
 └── references/
-    ├── prompts.md              intake checklist + every Higgsfield prompt template
-    ├── pipeline.md             idempotent batch scripts (anchor-gated stills → previz →
+    ├── kie-pipeline.md         Kie production workflow (default)
+    ├── pipeline.md             original Higgsfield-compatible workflow
     │                           dives → connectors → encode → posters → SSIM seam gate)
     ├── scrub-engine.js         portable, config-driven scrub engine (blob-seek, lazy load,
     │                           seam crossfade, device-class tiering, LPM/data-saver fallbacks)

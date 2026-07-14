@@ -2,12 +2,13 @@
 name: scroll-world
 description: >
   Build an immersive scroll-scrubbed "fly through the world" landing page for any
-  industry or brand using Higgsfield. As the visitor scrolls, a pre-rendered camera
+  industry or brand using Kie.ai by default (with the original Higgsfield workflow retained as
+  an option). As the visitor scrolls, a pre-rendered camera
   flies from outside each scene into its interior, then flows on to the next scene
   with NO cuts — one continuous connected flight (Emons-style isometric diorama world,
   or any art direction you pick). The skill interviews the user for the topic, the
   story beats/sections, and brand kit, then generates cohesive scenes + seamless camera
-  clips with Higgsfield and wires a portable, framework-agnostic scroll-scrub engine.
+  clips with Kie.ai and wires a portable, framework-agnostic scroll-scrub engine.
   Use when the user wants a "3D world" / "browse-through-the-industry" hero, a scroll
   cinematic, a diorama landing, or to turn a business into a scrollable world.
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion, Skill
@@ -17,8 +18,8 @@ allowed-tools: Bash, Read, Write, Edit, AskUserQuestion, Skill
 
 Produces a landing page where **scroll drives a camera**: it dives from outside a scene
 into its interior, then flies out and into the next scene, continuously, with no visible
-cuts. The visuals are AI-generated (Higgsfield); the page just scrubs pre-rendered video
-by scroll position. This is the same technique behind Apple's scroll-through product
+cuts. The visuals are AI-generated through Kie.ai by default; the page just scrubs
+pre-rendered video by scroll position. This is the same technique behind Apple's scroll-through product
 pages — the camera genuinely moves, scroll only drives time.
 
 **What you generate:** N scene stills (anchor-gated) → N "dive-in" camera clips → N-1
@@ -35,29 +36,27 @@ connector. Getting this wrong is the single most common failure and produces a v
 Do not assume a frontend framework. The scrub engine in `references/scrub-engine.js` is
 self-contained vanilla JS (it builds its own DOM + injects its own CSS into a container
 you give it), so it drops into plain HTML, Next.js, Vue, a Python-served page, anything.
-The value of this skill is the Higgsfield pipeline, the prompts, and the seam method —
-not the framework.
+The value of this skill is the provider pipeline, the prompts, and the seam method—not the
+framework. Read [`references/kie-pipeline.md`](references/kie-pipeline.md) for the default
+Kie workflow; `references/pipeline.md` preserves upstream Higgsfield compatibility.
 
 ---
 
 ## Step 0 — Bootstrap
 
-1. **Higgsfield CLI.** If `higgsfield` is not on `$PATH`, install per the
-   `higgsfield-generate` skill. If `higgsfield workspace list` fails auth, ask the user
-   to run `higgsfield auth login` (interactive OAuth — you cannot run it) and, if needed,
-   `higgsfield workspace set <id>`. Confirm there are enough credits: a run is `N` image
-   gens + `N` video gens (architecture A) or `(2N-1)` video gens (architecture B), plus
-   re-rolls — the Step 1 budget tier sets `N`.
+1. **Kie API.** Require `KIE_API_KEY` in the local environment or a protected server
+   secret store; never place it in frontend code. Run
+   `python3 scripts/kie_generate.py --help` from the skill directory and use
+   `references/kie-pipeline.md`. Check Kie account credit balance before a batch and retain
+   generated `*.task.json` sidecars—the adapter records Kie-reported credit use per asset.
 2. **ffmpeg / ffprobe** on `$PATH` (frame extraction + encoding).
 3. **An image tool** for background knockout if you want floating scenes: PIL
    (`python3 -c "import PIL"`), or `cwebp`/`sips`. Optional — see Step 3.
 4. Caveats: macOS ships **bash 3.2** (no `declare -A`); don't use associative arrays in
-   scripts. Higgsfield generations take **3–8 min each** — always run them detached
-   (background) and poll, never a foreground blocking call. Reference-by-job-UUID is
-   rejected by media flags — pass **local file paths** to `--image/--start-image/--end-image`.
-   Video models differ in accepted params (e.g. Kling has no `--resolution`) and in whether
-   they support start/end-image conditioning at all — before batching, confirm the chosen
-   model's schema with `higgsfield model get <job_type>` and see the Step 4 model table.
+   scripts. Kie jobs are asynchronous; the adapter polls by default and can accept an
+   optional public HTTPS callback URL. It uploads local first/last frames for Kie requests
+   and downloads outputs immediately because provider URLs expire. Strict connectors use
+   only first/last-frame mode—do not mix reference assets into that request.
 
 ---
 
