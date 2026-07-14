@@ -21,7 +21,15 @@ command -v ffprobe
 command -v cwebp # optional but recommended for WebP stills/posters
 ```
 
-The adapter is standard-library Python; it has no package installation step.
+The adapter is standard-library Python; it has no package installation step. After marketplace
+installation, Claude Code adds the plugin's `bin/` directory to Bash `PATH`, so invoke it as:
+
+```bash
+scroll-world-kie --help
+```
+
+When developing from a local checkout before installing the plugin, use
+`python3 scripts/kie_generate.py` instead.
 
 Kie task results and upload URLs are temporary. The adapter downloads every successful
 output immediately to the project work directory and writes a sidecar `*.task.json` with
@@ -44,8 +52,10 @@ exclusive with multimodal reference-to-video.
 ## 1. Set the world paths
 
 ```bash
-REPO=/path/to/scroll-world
-GEN="$REPO/plugins/scroll-world/skills/scroll-world/scripts/kie_generate.py"
+# Marketplace-installed plugin:
+GEN=scroll-world-kie
+# Local checkout alternative:
+# GEN="/path/to/scroll-world/plugins/scroll-world/skills/scroll-world/scripts/kie_generate.py"
 WORK=/tmp/scroll-world
 ASSETS=./assets
 NAMES="surface leak seal proof retirement"

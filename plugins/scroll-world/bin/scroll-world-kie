@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Claude Code adds a plugin's bin/ directory to its Bash PATH while enabled.
+# This wrapper makes the Kie adapter callable after marketplace installation,
+# without hard-coding Claude's plugin-cache location.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec python3 "$ROOT/skills/scroll-world/scripts/kie_generate.py" "$@"

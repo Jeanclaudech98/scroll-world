@@ -1,15 +1,15 @@
 {
-  "name": "scroll-world",
-  "description": "Build an immersive scroll-scrubbed 'fly through the world' landing page for any industry or brand using Higgsfield. As the visitor scrolls, a pre-rendered camera flies from outside each scene into its interior, then flows on to the next scene with no cuts — one continuous connected flight. Interviews the user for the topic, story beats, and brand kit, then generates cohesive scenes + seamless camera clips and wires a portable, framework-agnostic scroll-scrub engine. Use for a '3D world' / 'browse-through-the-industry' hero, a scroll cinematic, or a diorama landing.",
-  "version": "0.2.0",
+  "name": "scroll-world-kie",
+  "description": "Build an immersive scroll-scrubbed 'fly through the world' landing page for any industry or brand using Kie.ai by default. As the visitor scrolls, a pre-rendered camera flies from outside each scene into its interior, then flows on to the next scene with no cuts — one continuous connected flight. Generates Seedream scene anchors and strict first/last-frame Seedance camera clips, then wires a portable, framework-agnostic scroll-scrub engine.",
+  "version": "0.3.0",
   "author": {
-    "name": "cyw",
-    "email": "cyw@cywang.me"
+    "name": "Jean-claude Chamandi",
+    "email": "jeanclaude.ch98@gmail.com"
   },
-  "homepage": "https://github.com/cth9191/scroll-world",
+  "homepage": "https://github.com/Jeanclaudech98/scroll-world",
   "license": "MIT",
   "keywords": [
-    "higgsfield",
+    "kie-ai",
     "landing-page",
     "scroll",
     "video",

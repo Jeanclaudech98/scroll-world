@@ -46,7 +46,9 @@ Kie workflow; `references/pipeline.md` preserves upstream Higgsfield compatibili
 
 1. **Kie API.** Require `KIE_API_KEY` in the local environment or a protected server
    secret store; never place it in frontend code. Run
-   `python3 scripts/kie_generate.py --help` from the skill directory and use
+   `scroll-world-kie --help` after marketplace installation (or
+   `python3 scripts/kie_generate.py --help` from the skill directory during local development)
+   and use
    `references/kie-pipeline.md`. Check Kie account credit balance before a batch and retain
    generated `*.task.json` sidecars—the adapter records Kie-reported credit use per asset.
 2. **ffmpeg / ffprobe** on `$PATH` (frame extraction + encoding).

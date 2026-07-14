@@ -20,15 +20,21 @@ logistics site, applied to whatever you want).
 
 ## Install
 
-### As a plugin (recommended)
+### As a Kie.ai plugin (recommended)
 
-```
-/plugin marketplace add cth9191/scroll-world
-/plugin install scroll-world@scroll-world
+```bash
+/plugin marketplace add Jeanclaudech98/scroll-world
+/plugin install scroll-world-kie@jean-scroll-world
 ```
 
-Then just ask for a scroll-through world landing page, or invoke `/scroll-world`.
-(For the original, unhardened version: `/plugin marketplace add oso95/scroll-world`.)
+Then start a fresh Claude Code session and invoke:
+
+```text
+/scroll-world-kie:scroll-world
+```
+
+The unique marketplace/plugin names let this coexist with the original
+`cth9191/scroll-world` plugin if it is already installed.
 
 ### Manually (drop-in skill)
 
@@ -47,8 +53,11 @@ asynchronous API instead of the Higgsfield CLI.
 
 ```bash
 export KIE_API_KEY='...'
-python3 plugins/scroll-world/skills/scroll-world/scripts/kie_generate.py --help
+scroll-world-kie --help
 ```
+
+When developing this repository before installation, run
+`python3 plugins/scroll-world/skills/scroll-world/scripts/kie_generate.py --help` instead.
 
 Follow the complete workflow in
 [`kie-pipeline.md`](plugins/scroll-world/skills/scroll-world/references/kie-pipeline.md).
@@ -56,6 +65,35 @@ The original Higgsfield workflow remains documented as an optional upstream-comp
 alternative.
 
 ## Requirements
+
+### Configure the Kie key for Claude Code
+
+This is a **plugin**, not an MCP server. No `.mcp.json` is needed. The plugin's `bin/`
+directory is added to Claude Code's Bash `PATH`; the adapter reads `KIE_API_KEY` from the
+Claude Code process environment.
+
+**Recommended: user-level Claude Code setting** — add the key locally on the machine that
+runs Claude Code, never in this repository:
+
+```json
+// ~/.claude/settings.json
+{
+  "env": {
+    "KIE_API_KEY": "your_kie_key_here"
+  }
+}
+```
+
+Alternatively, export it in the shell profile used to launch Claude Code:
+
+```bash
+export KIE_API_KEY='your_kie_key_here'
+claude
+```
+
+After configuring it, open a new Claude Code session and verify the plugin helper is
+available with `scroll-world-kie --help`. Do not commit a real key to `.env`,
+`.claude/settings.json`, project settings, or any frontend environment variable.
 
 ### Kie workflow
 

@@ -1,16 +1,16 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "scroll-world",
-  "description": "Immersive scroll-scrubbed 'fly through the world' landing pages, generated with Higgsfield. Hardened fork of oso95/scroll-world: budget tiers, spend gates, SSIM seam verification, mobile tiers, SEO.",
+  "name": "jean-scroll-world",
+  "description": "Immersive scroll-scrubbed 'fly through the world' landing pages, generated through Kie.ai by default. Hardened fork of oso95/scroll-world with Kie Seedance/Seedream support, budget tiers, spend gates, SSIM seam verification, mobile tiers, and SEO.",
   "owner": {
-    "name": "Chase Hannegan",
-    "email": "hanneganc@gmail.com"
+    "name": "Jean-claude Chamandi",
+    "email": "jeanclaude.ch98@gmail.com"
   },
   "plugins": [
     {
-      "name": "scroll-world",
+      "name": "scroll-world-kie",
       "source": "./plugins/scroll-world",
-      "description": "Build an immersive scroll-scrubbed landing page where a pre-rendered camera flies from outside each scene into its interior, then flows on to the next with no cuts. Interviews the user for topic, story beats, brand kit, budget tier, and mobile tier; generates cohesive scenes + seamless camera clips with Higgsfield behind approval gates; verifies every seam with an SSIM check; wires a portable, framework-agnostic scrub engine.",
+      "description": "Build an immersive scroll-scrubbed landing page where a pre-rendered camera flies through connected scenes with no cuts. Uses Kie.ai by default for Seedream anchor art and strict first/last-frame Seedance clips, verifies seams with SSIM, and wires a portable scrub engine.",
       "category": "design"
     }
   ]

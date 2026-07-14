@@ -9,5 +9,5 @@ This directory is the installable plugin. The skill itself lives in
 [`skills/scroll-world/`](skills/scroll-world/SKILL.md). See the
 [repository README](../../README.md) for what it does, requirements, and install steps.
 
-Invoke by asking Claude Code for a scroll-through world / diorama landing page, or run
-`/scroll-world`.
+Invoke with `/scroll-world-kie:scroll-world`, or ask Claude Code for a Kie-powered
+scroll-through world / diorama landing page. See the repository README for setup.
